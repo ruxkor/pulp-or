@@ -1662,13 +1662,8 @@ class GUROBI(LpSolver):
             LpSolver.__init__(self, mip, msg)
             self.timeLimit = timeLimit
             self.epgap = epgap
-            #set the output of gurobi
-            if not self.msg:
-                gurobipy.setParam("OutputFlag", 0)
-            #set the gurobi parameter values
-            for key,value in solverParams.items():
-                gurobipy.setParam(key, value)
-
+            self.solverParams = solverParams
+        
         def findSolutionValues(self, lp):
             model = lp.solverModel
             solutionStatus = model.Status
@@ -1767,6 +1762,12 @@ class GUROBI(LpSolver):
             creates a gurobi model, variables and constraints and attaches
             them to the lp model which it then solves
             """
+            #set the output of gurobi
+            gurobipy.setParam("OutputFlag", 0 if not self.msg else 1)
+            #set the gurobi parameter values
+            for key,value in self.solverParams.items():
+                gurobipy.setParam(key, value)
+            
             self.buildSolverModel(lp)
             #set the initial solution
             log.debug("Solve the Model using gurobi")
