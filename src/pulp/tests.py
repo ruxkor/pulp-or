@@ -399,13 +399,12 @@ def pulpTest090(solver):
     prob += a
     prob += b
     prob += c
-
     prob.setSolver(solver)# Variables
     x = LpVariable("x", 0, 4, LpContinuous, obj + a + b)
     y = LpVariable("y", -1, 1, LpContinuous, 4*obj + a - c)
-    prob.resolve()
+    prob.solve()
     z = LpVariable("z", 0, None, LpContinuous, 9*obj + b + c)
-    if solver.__class__ in [CPLEX_DLL, COINMP_DLL]:
+    if solver.__class__ in (CPLEX_DLL, COINMP_DLL, GUROBI):
         print "\t Testing resolve of problem"
         prob.resolve()
         #difficult to check this is doing what we want as the resolve is

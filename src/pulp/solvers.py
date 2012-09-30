@@ -663,9 +663,8 @@ try:
                 print "Cplex status=", solutionStatus.value
             lp.resolveOK = True
             for var in lp.variables():
-                var.isModified = False
-            lp.status = CplexLpStatus.get(solutionStatus.value,
-                                          LpStatusUndefined)
+                var.modified = False
+            lp.status = CplexLpStatus.get(solutionStatus.value, LpStatusUndefined)
             return lp.status
 
         def __del__(self):
@@ -776,37 +775,36 @@ try:
             #need to be added to the problem
             newVars = modifiedVars
             #print newVars
-            self.v2n.update([(var, i+self.addedVars)
-                                for i,var in enumerate(newVars)])
-            self.n2v.update([(i+self.addedVars, var)
-                                for i,var in enumerate(newVars)])
-            self.vname2n.update([(var.name, i+self.addedVars)
-                                for i,var in enumerate(newVars)])
+            self.v2n.update([(var, i+self.addedVars) for i,var in enumerate(newVars)])
+            self.n2v.update([(i+self.addedVars, var) for i,var in enumerate(newVars)])
+            self.vname2n.update([(var.name, i+self.addedVars) for i,var in enumerate(newVars)])
             oldVars = self.addedVars
             self.addedVars += len(newVars)
             (ccnt,nzcnt,obj,cmatbeg,
             cmatlen, cmatind,cmatval,
             lb,ub, initvals,
-            colname, coltype) = self.getSparseCols(newVars, lp, oldVars,
-                                defBound = 1e20)
-            CPXaddcolsStatus = CPLEX_DLL.lib.CPXaddcols(self.env, self.hprob,
-                                          ccnt, nzcnt,
-                                          obj,cmatbeg,
-                                          cmatind,cmatval,
-                                          lb,ub,colname)
+            colname, coltype) = self.getSparseCols(newVars, lp, oldVars, defBound=1e20)
+            CPXaddcolsStatus = CPLEX_DLL.lib.CPXaddcols(
+                self.env, self.hprob,
+                ccnt, nzcnt,
+                obj, cmatbeg,
+                cmatind, cmatval,
+                lb, ub, colname
+            )
             #add the column types
             if lp.isMIP() and self.mip:
                 indices = (ctypes.c_int * len(newVars))()
                 for i,var in enumerate(newVars):
                     indices[i] = oldVars +i
-                CPXchgctypeStatus = CPLEX_DLL.lib.CPXchgctype (self.env,
-                                                 self.hprob,
-                                                 ccnt, indices, coltype);
+                CPXchgctypeStatus = CPLEX_DLL.lib.CPXchgctype (
+                    self.env,
+                    self.hprob,
+                    ccnt, indices, coltype
+                )
             #solve the problem
             self.callSolver(lp.isMIP())
             #get the solution information
-            solutionStatus = self.findSolutionValues(lp, self.addedVars,
-                                                     self.addedRows)
+            solutionStatus = self.findSolutionValues(lp, self.addedVars, self.addedRows)
             for var in modifiedVars:
                 var.modified = False
             return solutionStatus
@@ -850,9 +848,9 @@ try:
             sparseMatrix = sparse.Matrix(range(numRows), range(numVars))
             for var in vars:
                 for row,coeff in var.expression.iteritems():
-                   if row.name == lp.objective.name:
+                    if row.name == lp.objective.name:
                         myobjectCoeffs[var] = coeff
-                   else:
+                    else:
                         sparseMatrix.add(self.c2n[row.name], self.v2n[var] - offset, coeff)
             #objective values
             objectCoeffs = (ctypes.c_double * numVars)()
@@ -868,16 +866,14 @@ try:
             NumVarCharArray = ctypes.c_char * numVars
             columnType = NumVarCharArray()
             if lp.isMIP():
-                CplexLpCategories = {LpContinuous: "C",
-                                    LpInteger: "I"}
+                CplexLpCategories = {LpContinuous: "C", LpInteger: "I"}
                 for v in vars:
                     columnType[self.v2n[v] - offset] = CplexLpCategories[v.cat]
-            return  numVars, numels,  objectCoeffs, \
+            return \
+                numVars, numels, objectCoeffs, \
                 startsBase, lenBase, indBase, \
                 elemBase, lowerBounds, upperBounds, initValues, colNames, \
                 columnType
-
-
 
     CPLEX = CPLEX_DLL
 except (ImportError,OSError):
@@ -988,8 +984,7 @@ else:
                 self.solverModel.set_problem_name(lp.name)
             log.debug("set the sense of the problem")
             if lp.sense == LpMaximize:
-                lp.solverModel.objective.set_sense(
-                                    lp.solverModel.objective.sense.maximize)
+                lp.solverModel.objective.set_sense(lp.solverModel.objective.sense.maximize)
             obj = [float(lp.objective.get(var, 0.0)) for var in lp.variables()]
             def cplex_var_lb(var):
                 if var.lowBound is not None:
@@ -1035,8 +1030,10 @@ else:
                     raise PulpSolverError, 'Detected an invalid constraint type'
                 rownames.append(name)
                 rhs.append(float(-constraint.constant))
-            lp.solverModel.linear_constraints.add(lin_expr=rows, senses=senses,
-                                rhs=rhs, names=rownames)
+            lp.solverModel.linear_constraints.add(
+                lin_expr=rows, senses=senses,
+                rhs=rhs, names=rownames
+            )
             log.debug("set the type of the problem")
             if not self.mip:
                 self.solverModel.set_problem_type(cplex.Cplex.problem_type.LP)
@@ -1104,7 +1101,7 @@ else:
                 print "Cplex status=", lp.cplex_status
             lp.resolveOK = True
             for var in lp.variables():
-                var.isModified = False
+                var.modified = False
             return lp.status
 
         def actualResolve(self,lp):
@@ -1645,12 +1642,7 @@ class GUROBI(LpSolver):
             """Solve a well formulated lp problem"""
             raise PulpSolverError, "GUROBI: Not Available"
     else:
-        def __init__(self,
-                    mip = True,
-                    msg = True,
-                    timeLimit = None,
-                    epgap = None,
-                    **solverParams):
+        def __init__(self, mip=True, msg=True, timeLimit=None, epgap=None, **solverParams):
             """
             Initializes the Gurobi solver.
 
@@ -1668,17 +1660,18 @@ class GUROBI(LpSolver):
             model = lp.solverModel
             solutionStatus = model.Status
             GRB = gurobipy.GRB
-            gurobiLpStatus = {GRB.OPTIMAL: LpStatusOptimal,
-                                   GRB.INFEASIBLE: LpStatusInfeasible,
-                                   GRB.INF_OR_UNBD: LpStatusInfeasible,
-                                   GRB.UNBOUNDED: LpStatusUnbounded,
-                                   GRB.ITERATION_LIMIT: LpStatusNotSolved,
-                                   GRB.NODE_LIMIT: LpStatusNotSolved,
-                                   GRB.TIME_LIMIT: LpStatusNotSolved,
-                                   GRB.SOLUTION_LIMIT: LpStatusNotSolved,
-                                   GRB.INTERRUPTED: LpStatusNotSolved,
-                                   GRB.NUMERIC: LpStatusNotSolved,
-                                   }
+            gurobiLpStatus = {
+                GRB.OPTIMAL: LpStatusOptimal,
+                GRB.INFEASIBLE: LpStatusInfeasible,
+                GRB.INF_OR_UNBD: LpStatusInfeasible,
+                GRB.UNBOUNDED: LpStatusUnbounded,
+                GRB.ITERATION_LIMIT: LpStatusNotSolved,
+                GRB.NODE_LIMIT: LpStatusNotSolved,
+                GRB.TIME_LIMIT: LpStatusNotSolved,
+                GRB.SOLUTION_LIMIT: LpStatusNotSolved,
+                GRB.INTERRUPTED: LpStatusNotSolved,
+                GRB.NUMERIC: LpStatusNotSolved,
+            }
             #populate pulp solution values
             for var in lp.variables():
                 try:
@@ -1703,7 +1696,7 @@ class GUROBI(LpSolver):
                 print "Gurobi status=", solutionStatus
             lp.resolveOK = True
             for var in lp.variables():
-                var.isModified = False
+                var.modified = False
             lp.status = gurobiLpStatus.get(solutionStatus, LpStatusUndefined)
             return lp.status
 
@@ -1792,9 +1785,38 @@ class GUROBI(LpSolver):
             uses the old solver and modifies the rhs of the modified constraints
             """
             log.debug("Resolve the Model using gurobi")
-            for constraint in lp.constraints.values():
-                if constraint.modified:
-                    constraint.solverConstraint.setAttr(gurobipy.GRB.Attr.RHS, -constraint.constant)
+            
+            # change variables
+            variables_modified = [v for v in lp.variables() if v.modified]
+            for var in variables_modified:
+                lowBound = var.lowBound if var.lowBound is not None else -gurobipy.GRB.INFINITY
+                upBound = var.upBound if var.upBound is not None else gurobipy.GRB.INFINITY
+                varType = gurobipy.GRB.INTEGER if var.cat == LpInteger and self.mip else gurobipy.GRB.CONTINUOUS 
+                if not hasattr(var,'solverVar') or not lp.solverModel.getVarByName(var.solverVar.name):
+                    var.solverVar = lp.solverModel.addVar(lowBound, upBound, vtype=varType, name=var.name)             
+                else:
+                    for g_attr, attr in (
+                        (gurobipy.GRB.LB,lowBound),
+                        (gurobipy.GRB.UB,upBound),
+                        (gurobipy.GRB.VType,varType),
+                        (gurobipy.GRB.VarName,var.name)
+                    ):
+                        if var.solverVar.getAttr(g_attr) != attr: 
+                            var.solverVar.setAttr(g_attr,attr)
+            lp.solverModel.update()
+            
+            # change rhs of modified constraints
+            constraints_modified = (c for c in lp.constraints.itervalues() if c.modified)
+            for constraint in constraints_modified:
+                constraint.solverConstraint.setAttr(gurobipy.GRB.Attr.RHS, -constraint.constant)
+            lp.solverModel.update()
+            
+            # change the objective function
+            objective_expr = gurobipy.LinExpr(lp.objective.values(), [v.solverVar for v in lp.objective.iterkeys()])
+            objective_expr.addConstant(lp.objective.constant)
+            lp.solverModel.setObjective(objective_expr)
+            
+            
             lp.solverModel.update()
             self.callSolver(lp, callback = callback)
             #get the solution information
@@ -1962,9 +1984,8 @@ class PYGLPK(LpSolver):
                 print "glpk status=", solutionStatus
             lp.resolveOK = True
             for var in lp.variables():
-                var.isModified = False
-            lp.status = glpkLpStatus.get(solutionStatus,
-                    LpStatusUndefined)
+                var.modified = False
+            lp.status = glpkLpStatus.get(solutionStatus, LpStatusUndefined)
             return lp.status
 
         def available(self):
@@ -2139,9 +2160,8 @@ class YAPOSIB(LpSolver):
                 print "yaposib status=", solutionStatus
             lp.resolveOK = True
             for var in lp.variables():
-                var.isModified = False
-            lp.status = yaposibLpStatus.get(solutionStatus,
-                    LpStatusUndefined)
+                var.modified = False
+            lp.status = yaposibLpStatus.get(solutionStatus, LpStatusUndefined)
             return lp.status
 
         def available(self):

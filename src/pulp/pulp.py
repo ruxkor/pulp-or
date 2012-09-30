@@ -163,7 +163,7 @@ class LpElement(object):
 
     def __init__(self, name):
         self.name = name
-         # self.hash MUST be different for each variable
+        # self.hash MUST be different for each variable
         # else dict() will call the comparison operators that are overloaded
         self.hash = id(self)
         self.modified = True
@@ -265,24 +265,27 @@ class LpVariable(LpElement):
         self.expression = e
         self.addVariableToConstraints(e)
 
-    def matrix(self, name, indexs, lowBound = None, upBound = None, cat = LpContinuous,
-            indexStart = []):
+    @classmethod
+    def matrix(cls, name, indexs, lowBound = None, upBound = None, cat = LpContinuous,
+        indexStart = []):
         if not isinstance(indexs, tuple): indexs = (indexs,)
         if "%" not in name: name += "_%s" * len(indexs)
 
         index = indexs[0]
         indexs = indexs[1:]
         if len(indexs) == 0:
-            return [LpVariable(name % tuple(indexStart + [i]),
-                                            lowBound, upBound, cat)
-                        for i in index]
+            return [
+                LpVariable(name % tuple(indexStart + [i]), lowBound, upBound, cat)
+                for i in index
+            ]
         else:
-            return [LpVariable.matrix(name, indexs, lowBound,
-                                        upBound, cat, indexStart + [i])
-                       for i in index]
-    matrix = classmethod(matrix)
-
-    def dicts(self, name, indexs, lowBound = None, upBound = None, cat = LpContinuous,
+            return [
+                LpVariable.matrix(name, indexs, lowBound, upBound, cat, indexStart + [i])
+                for i in index
+            ]
+    
+    @classmethod
+    def dicts(cls, name, indexs, lowBound = None, upBound = None, cat = LpContinuous,
         indexStart = []):
         """
         Creates a dictionary of LP variables
@@ -315,9 +318,9 @@ class LpVariable(LpElement):
             for i in index:
                 d[i] = LpVariable.dicts(name, indexs, lowBound, upBound, cat, indexStart + [i])
         return d
-    dicts = classmethod(dicts)
 
-    def dict(self, name, indexs, lowBound = None, upBound = None, cat = LpContinuous):
+    @classmethod
+    def dict(cls, name, indexs, lowBound = None, upBound = None, cat = LpContinuous):
         if not isinstance(indexs, tuple): indexs = (indexs,)
         if "%" not in name: name += "_%s" * len(indexs)
 
@@ -345,11 +348,8 @@ class LpVariable(LpElement):
         else:
             return {}
 
-        d = {}
-        for i in index:
-         d[i] = self(name % i, lowBound, upBound, cat)
+        d = dict((i, cls(name % i, lowBound, upBound, cat)) for i in index)
         return d
-    dict = classmethod(dict)
 
     def getLb(self):
         return self.lowBound
@@ -1085,7 +1085,6 @@ class LpProblem(object):
         self.noOverlap = 1
         self.solver = None
         self.initialValues = {}
-        self.modifiedVariables = []
         self.resolveOK = False
         self._variables = []
         self._variable_ids = {}  #old school using dict.keys() for a set
@@ -1555,8 +1554,7 @@ class LpProblem(object):
         for name in values:
             if activity:
                 #reports the activitynot the slack
-                self.constraints[name].slack = -1 * (
-                        self.constraints[name].constant + float(values[name]))
+                self.constraints[name].slack = -(self.constraints[name].constant + float(values[name]))
             else:
                 self.constraints[name].slack = float(values[name])
 
@@ -1639,8 +1637,7 @@ class LpProblem(object):
         #time it
         self.solutionTime = -clock()
         statuses = []
-        for i,(obj,absol,rel) in enumerate(zip(objectives,
-                                               absoluteTols, relativeTols)):
+        for i,(obj,absol,rel) in enumerate(zip(objectives, absoluteTols, relativeTols)):
             self.setObjective(obj)
             status = solver.actualSolve(self)
             statuses.append(status)
@@ -1661,7 +1658,8 @@ class LpProblem(object):
         if self.resolveOK:
             return self.solver.actualResolve(self, **kwargs)
         else:
-            return self.solve(solver = solver, **kwargs)
+            logging.warn('resolve not ok. solving instead')
+            return self.solve(solver=solver, **kwargs)
 
     def setSolver(self,solver = LpSolverDefault):
         """Sets the Solver for this problem useful if you are using
