@@ -1737,9 +1737,14 @@ class GUROBI(LpSolver):
                 lowBound = var.lowBound if var.lowBound is not None else -gurobipy.GRB.INFINITY
                 upBound = var.upBound if var.upBound is not None else gurobipy.GRB.INFINITY
                 varType = gurobipy.GRB.INTEGER if var.cat == LpInteger and self.mip else gurobipy.GRB.CONTINUOUS 
-                obj = lp.objective.get(var, 0.0)
-                var.solverVar = lp.solverModel.addVar(lowBound, upBound, vtype=varType, obj=obj, name=var.name)
+                var.solverVar = lp.solverModel.addVar(lowBound, upBound, vtype=varType, name=var.name)
             lp.solverModel.update()
+            
+            log.debug("add the Objective Function to the problem")
+            objective_expr = gurobipy.LinExpr(lp.objective.values(), [v.solverVar for v in lp.objective.iterkeys()])
+            objective_expr.addConstant(lp.objective.constant)
+            lp.solverModel.setObjective(objective_expr)
+            
             log.debug("add the Constraints to the problem")
             for name,constraint in lp.constraints.items():
                 #build the expression
