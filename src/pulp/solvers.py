@@ -934,7 +934,8 @@ else:
                     msg = True,
                     timeLimit = None,
                     epgap = None,
-                    logfilename = None):
+                    logfilename = None,
+                    options = []):
             """
             Initializes the CPLEX_PY solver.
 
@@ -947,6 +948,7 @@ else:
             self.timeLimit = timeLimit
             self.epgap = epgap
             self.logfilename = logfilename
+            self.options = options
 
         def available(self):
             """True if the solver is available"""
