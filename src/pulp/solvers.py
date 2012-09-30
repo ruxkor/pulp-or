@@ -158,13 +158,13 @@ class LpSolver:
         return lp.solve(self)
 
     #TODO: Not sure if this code should be here or in a child class
-    def getCplexStyleArrays(self,lp,
-                       senseDict={LpConstraintEQ:"E", LpConstraintLE:"L", LpConstraintGE:"G"},
-                       LpVarCategories = {LpContinuous: "C",LpInteger: "I"},
-                       LpObjSenses = {LpMaximize : -1,
-                                      LpMinimize : 1},
-                       infBound =  1e20
-                       ):
+    def getCplexStyleArrays(
+        self, lp,
+        senseDict={LpConstraintEQ:"E", LpConstraintLE:"L", LpConstraintGE:"G"},
+        LpVarCategories={LpContinuous: "C",LpInteger: "I"},
+        LpObjSenses={LpMaximize : -1, LpMinimize : 1},
+        infBound=1e20
+    ):
         """returns the arrays suitable to pass to a cdll Cplex
         or other solvers that are similar
 
@@ -1410,7 +1410,7 @@ class PULP_CBC_CMD(COIN_CMD):
             return False
         def actualSolve(self, lp, callback = None):
             """Solve a well formulated lp problem"""
-            raise PulpSolverError, "PULP_CBC_CMD: Not Available (check permissions on %s)" % arch_pulp_cbc_path
+            raise PulpSolverError, "GUROBI: Not Available"
     else:
         def __init__(self, path=None, *args, **kwargs):
             """
@@ -1737,25 +1737,16 @@ class GUROBI(LpSolver):
                 lp.solverModel.setParam("MIPGap", self.epgap)
             log.debug("add the variables to the problem")
             for var in lp.variables():
-                lowBound = var.lowBound
-                if lowBound is None:
-                    lowBound = -gurobipy.GRB.INFINITY
-                upBound = var.upBound
-                if upBound is None:
-                    upBound = gurobipy.GRB.INFINITY
+                lowBound = var.lowBound if var.lowBound is not None else -gurobipy.GRB.INFINITY
+                upBound = var.upBound if var.upBound is not None else gurobipy.GRB.INFINITY
+                varType = gurobipy.GRB.INTEGER if var.cat == LpInteger and self.mip else gurobipy.GRB.CONTINUOUS 
                 obj = lp.objective.get(var, 0.0)
-                varType = gurobipy.GRB.CONTINUOUS
-                if var.cat == LpInteger and self.mip:
-                    varType = gurobipy.GRB.INTEGER
-                var.solverVar = lp.solverModel.addVar(lowBound, upBound,
-                            vtype = varType,
-                            obj = obj, name = var.name)
+                var.solverVar = lp.solverModel.addVar(lowBound, upBound, vtype=varType, obj=obj, name=var.name)
             lp.solverModel.update()
             log.debug("add the Constraints to the problem")
             for name,constraint in lp.constraints.items():
                 #build the expression
-                expr = gurobipy.LinExpr(constraint.values(),
-                            [v.solverVar for v in constraint.keys()])
+                expr = gurobipy.LinExpr(constraint.values(), [v.solverVar for v in constraint.iterkeys()])
                 if constraint.sense == LpConstraintLE:
                     relation = gurobipy.GRB.LESS_EQUAL
                 elif constraint.sense == LpConstraintGE:
@@ -1764,8 +1755,7 @@ class GUROBI(LpSolver):
                     relation = gurobipy.GRB.EQUAL
                 else:
                     raise PulpSolverError, 'Detected an invalid constraint type'
-                constraint.solverConstraint = lp.solverModel.addConstr(expr,
-                    relation, -constraint.constant, name)
+                constraint.solverConstraint = lp.solverModel.addConstr(expr, relation, -constraint.constant, name)
             lp.solverModel.update()
 
         def actualSolve(self, lp, callback = None):
@@ -1796,8 +1786,7 @@ class GUROBI(LpSolver):
             log.debug("Resolve the Model using gurobi")
             for constraint in lp.constraints.values():
                 if constraint.modified:
-                    constraint.solverConstraint.setAttr(gurobipy.GRB.Attr.RHS,
-                                                        -constraint.constant)
+                    constraint.solverConstraint.setAttr(gurobipy.GRB.Attr.RHS, -constraint.constant)
             lp.solverModel.update()
             self.callSolver(lp, callback = callback)
             #get the solution information
