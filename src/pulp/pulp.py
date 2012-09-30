@@ -1086,7 +1086,6 @@ class LpProblem(object):
         self.solver = None
         self.initialValues = {}
         self.modifiedVariables = []
-        self.modifiedConstraints = []
         self.resolveOK = False
         self._variables = []
         self._variable_ids = {}  #old school using dict.keys() for a set
@@ -1265,7 +1264,6 @@ class LpProblem(object):
             else:
                 print "Warning: overlapping constraint names:", name
         self.constraints[name] = constraint
-        self.modifiedConstraints.append(constraint)
         self.addVariables(constraint.keys())
 
     def setObjective(self,obj):
