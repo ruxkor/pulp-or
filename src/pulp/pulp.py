@@ -1090,10 +1090,9 @@ class LpProblem(object):
         self._variable_ids = {}  #old school using dict.keys() for a set
         self.dummyVar = None
 
-
         # locals
         self.lastUnused = 0
-
+    
     def __repr__(self):
         string = self.name+":\n"
         if self.sense == 1:

@@ -943,6 +943,7 @@ else:
             LpSolver.__init__(self, mip, msg)
             self.timeLimit = timeLimit
             self.epgap = epgap
+            self.epgap_actual = None
             self.logfilename = logfilename
             self.options = options
 
@@ -1654,6 +1655,7 @@ class GUROBI(LpSolver):
             LpSolver.__init__(self, mip, msg)
             self.timeLimit = timeLimit
             self.epgap = epgap
+            self.epgap_actual = None
             self.solverParams = solverParams
         
         def findSolutionValues(self, lp):
@@ -1697,6 +1699,12 @@ class GUROBI(LpSolver):
             lp.resolveOK = True
             for var in lp.variables():
                 var.modified = False
+            
+            # get the MIP gap and store it 
+            self.epgap_actual = abs(-1.0 + model.ObjBound / model.ObjVal) \
+                if model.IsMIP and lp.status in (LpStatusOptimal,LpStatusNotSolved) and model.ObjVal != 0 \
+                else None
+                
             lp.status = gurobiLpStatus.get(solutionStatus, LpStatusUndefined)
             return lp.status
 
@@ -1935,12 +1943,7 @@ class PYGLPK(LpSolver):
             """Solve a well formulated lp problem"""
             raise PulpSolverError, "GLPK: Not Available"
     else:
-        def __init__(self,
-                    mip = True,
-                    msg = True,
-                    timeLimit = None,
-                    epgap = None,
-                    **solverParams):
+        def __init__(self, mip=True, msg=True, timeLimit=None, epgap=None, **solverParams):
             """
             Initializes the glpk solver.
 
@@ -1953,8 +1956,8 @@ class PYGLPK(LpSolver):
             LpSolver.__init__(self, mip, msg)
             self.timeLimit = timeLimit # time limits are not handled
             self.epgap = epgap
-            if not self.msg:
-                glpk.env.term_on = False
+            self.epgap_actual = None
+            if not self.msg: glpk.env.term_on = False
 
         def findSolutionValues(self, lp):
             model = lp.solverModel
