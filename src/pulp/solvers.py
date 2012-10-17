@@ -1820,10 +1820,9 @@ class GUROBI(LpSolver):
             lp.solverModel.update()
             
             # change the objective function
-            objective_expr = gurobipy.LinExpr(lp.objective.values(), [v.solverVar for v in lp.objective.iterkeys()])
+            objective_expr = gurobipy.LinExpr([(v_val,v.solverVar) for (v,v_val) in lp.objective.iteritems()])
             objective_expr.addConstant(lp.objective.constant)
             lp.solverModel.setObjective(objective_expr)
-            
             
             lp.solverModel.update()
             self.callSolver(lp, callback = callback)
