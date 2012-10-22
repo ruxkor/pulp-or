@@ -1729,9 +1729,9 @@ class GUROBI(LpSolver):
             log.debug("set the sense of the problem")
             if lp.sense == LpMaximize:
                 lp.solverModel.setAttr("ModelSense", -1)
-            if self.timeLimit:
+            if self.timeLimit is not None:
                 lp.solverModel.setParam("TimeLimit", self.timeLimit)
-            if self.epgap:
+            if self.epgap is not None:
                 lp.solverModel.setParam("MIPGap", self.epgap)
             log.debug("add the variables to the problem")
             for var in lp.variables():
@@ -1793,6 +1793,11 @@ class GUROBI(LpSolver):
             uses the old solver and modifies the rhs of the modified constraints
             """
             log.debug("Resolve the Model using gurobi")
+            
+            if self.timeLimit != lp.solverModel.Params.TimeLimit:
+                lp.solverModel.Params.TimeLimit = self.timeLimit
+            if self.epgap != lp.solverModel.Params.MIPGap:
+                lp.solverModel.Params.MIPGap = self.epgap
             
             # change variables
             variables_modified = [v for v in lp.variables() if v.modified]
