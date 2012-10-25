@@ -1794,10 +1794,9 @@ class GUROBI(LpSolver):
             """
             log.debug("Resolve the Model using gurobi")
             
-            if self.timeLimit != lp.solverModel.Params.TimeLimit:
-                lp.solverModel.Params.TimeLimit = self.timeLimit
-            if self.epgap != lp.solverModel.Params.MIPGap:
-                lp.solverModel.Params.MIPGap = self.epgap
+            # change timelimit and epgap
+            lp.solverModel.Params.TimeLimit = self.timeLimit or float('inf')
+            lp.solverModel.Params.MIPGap = self.epgap or 1e-4
             
             # change variables
             variables_modified = [v for v in lp.variables() if v.modified]
